@@ -64,6 +64,16 @@ def normalize(features: torch.Tensor) -> torch.Tensor:
     return features / features.norm(dim=-1, keepdim=True).clamp_min(1e-12)
 
 
+def as_tensor_features(output: object) -> torch.Tensor:
+    if isinstance(output, torch.Tensor):
+        return output
+    if hasattr(output, "pooler_output"):
+        return output.pooler_output
+    if hasattr(output, "last_hidden_state"):
+        return output.last_hidden_state[:, 0]
+    raise TypeError(f"Unsupported feature output type: {type(output)}")
+
+
 def compute_confusion(y_true: Iterable[int], y_pred: Iterable[int], num_classes: int) -> np.ndarray:
     cm = np.zeros((num_classes, num_classes), dtype=np.int64)
     for true, pred in zip(y_true, y_pred):
@@ -118,7 +128,7 @@ class TransformersClipBackend:
         class_features = []
         for prompts in prompts_by_class:
             inputs = self.processor(text=list(prompts), return_tensors="pt", padding=True).to(self.device)
-            features = self.model.get_text_features(**inputs)
+            features = as_tensor_features(self.model.get_text_features(**inputs))
             features = normalize(features)
             class_features.append(normalize(features.mean(dim=0, keepdim=True)))
         return torch.cat(class_features, dim=0)
@@ -126,7 +136,7 @@ class TransformersClipBackend:
     @torch.no_grad()
     def encode_images(self, images: Sequence[Image.Image]) -> torch.Tensor:
         inputs = self.processor(images=list(images), return_tensors="pt").to(self.device)
-        features = self.model.get_image_features(**inputs)
+        features = as_tensor_features(self.model.get_image_features(**inputs))
         return normalize(features)
 
 
@@ -276,4 +286,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

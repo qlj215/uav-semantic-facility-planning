@@ -64,6 +64,61 @@ bash scripts/run_clip_three_baselines.sh
 
 If `REMOTECLIP_CKPT` is not set, the script runs HuggingFace CLIP and OpenCLIP, then skips RemoteCLIP with a clear message.
 
+## Linear Probe
+
+Zero-shot 只测试文本提示能否直接匹配图像。Linear probe 冻结 CLIP/RemoteCLIP 图像编码器，只训练一个线性分类头，用来判断视觉特征本身是否适合 12 类设施分类。
+
+HuggingFace CLIP:
+
+```bash
+python3 scripts/train_clip_linear_probe.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --backend transformers \
+  --model-id openai/clip-vit-base-patch32 \
+  --batch-size 64 \
+  --probe-batch-size 256 \
+  --epochs 50 \
+  --lr 1e-3 \
+  --output-dir outputs/clip_linear_probe/hf_clip_vit_b32
+```
+
+RemoteCLIP:
+
+```bash
+python3 scripts/train_clip_linear_probe.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --backend open_clip \
+  --open-clip-model ViT-B-32 \
+  --open-clip-pretrained /root/autodl-tmp/models/RemoteCLIP-ViT-B-32.pt \
+  --batch-size 64 \
+  --probe-batch-size 256 \
+  --epochs 50 \
+  --lr 1e-3 \
+  --output-dir outputs/clip_linear_probe/remoteclip_vit_b32
+```
+
+Run both:
+
+```bash
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+REMOTECLIP_CKPT=/root/autodl-tmp/models/RemoteCLIP-ViT-B-32.pt \
+BATCH_SIZE=64 \
+PROBE_BATCH_SIZE=256 \
+EPOCHS=50 \
+bash scripts/run_clip_linear_probe_baselines.sh
+```
+
+Outputs:
+
+```text
+outputs/clip_linear_probe/<run_name>/
+├── metrics.json
+├── confusion_matrix.csv
+├── predictions.jsonl
+├── class_to_idx.json
+└── linear_probe.pt
+```
+
 ## Prompt Templates
 
 The default script averages three templates:

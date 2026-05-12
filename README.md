@@ -139,3 +139,57 @@ bash scripts/run_clip_three_baselines.sh
 ```
 
 如果不设置 `REMOTECLIP_CKPT`，脚本会跳过 RemoteCLIP，只运行前两个 CLIP baseline。
+
+## CLIP / RemoteCLIP Linear Probe
+
+Linear probe 会冻结 CLIP/RemoteCLIP 图像编码器，只训练一个线性分类头。它用于判断预训练视觉特征是否适合当前 12 类设施识别，比 zero-shot 更接近可用分类模型。
+
+HuggingFace CLIP linear probe：
+
+```bash
+python3 scripts/train_clip_linear_probe.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --backend transformers \
+  --model-id openai/clip-vit-base-patch32 \
+  --batch-size 64 \
+  --probe-batch-size 256 \
+  --epochs 50 \
+  --lr 1e-3 \
+  --output-dir outputs/clip_linear_probe/hf_clip_vit_b32
+```
+
+RemoteCLIP linear probe：
+
+```bash
+python3 scripts/train_clip_linear_probe.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --backend open_clip \
+  --open-clip-model ViT-B-32 \
+  --open-clip-pretrained /root/autodl-tmp/models/RemoteCLIP-ViT-B-32.pt \
+  --batch-size 64 \
+  --probe-batch-size 256 \
+  --epochs 50 \
+  --lr 1e-3 \
+  --output-dir outputs/clip_linear_probe/remoteclip_vit_b32
+```
+
+也可以顺序运行两组 linear probe：
+
+```bash
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+REMOTECLIP_CKPT=/root/autodl-tmp/models/RemoteCLIP-ViT-B-32.pt \
+BATCH_SIZE=64 \
+PROBE_BATCH_SIZE=256 \
+EPOCHS=50 \
+bash scripts/run_clip_linear_probe_baselines.sh
+```
+
+输出目录包含：
+
+```text
+metrics.json
+confusion_matrix.csv
+predictions.jsonl
+linear_probe.pt
+class_to_idx.json
+```
