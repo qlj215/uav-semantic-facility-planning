@@ -83,6 +83,12 @@ python3 后续规划/方案B_D_项目框架/scripts/train_resnet50_baseline.py \
 
 其中 `--freeze-backbone` 表示只训练最后的分类头。去掉该参数即可全量微调，建议把学习率降到 `1e-4`。
 
+也可以一次性顺序运行三组 ResNet-50 baseline：
+
+```bash
+bash 后续规划/方案B_D_项目框架/scripts/run_resnet50_three_baselines.sh
+```
+
 ## 后续接入真实模型
 
 1. 用 fMoW 训练或评估设施分类模型，输出设施类别和置信度。

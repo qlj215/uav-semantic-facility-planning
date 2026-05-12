@@ -70,6 +70,21 @@ python3 scripts/train_resnet50_baseline.py \
   --pretrained
 ```
 
+Run all three ResNet-50 baselines in sequence:
+
+```bash
+bash scripts/run_resnet50_three_baselines.sh
+```
+
+Override common settings:
+
+```bash
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+BATCH_SIZE=64 IMAGE_SIZE=224 WORKERS=8 \
+EPOCHS_RANDOM=20 EPOCHS_HEAD=20 EPOCHS_FINETUNE=10 \
+bash scripts/run_resnet50_three_baselines.sh
+```
+
 ## 5. CLIP / RemoteCLIP Zero-Shot Baseline
 
 Install optional dependencies:
