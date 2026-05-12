@@ -192,4 +192,12 @@ confusion_matrix.csv
 predictions.jsonl
 linear_probe.pt
 class_to_idx.json
+feature_cache_train.pt
+feature_cache_val.pt
+```
+
+脚本默认会缓存 CLIP/RemoteCLIP 图像特征。第一次运行需要编码所有图片，会比较慢；之后如果数据、模型和输出目录不变，只修改 `--epochs`、`--lr` 等线性分类头参数，会直接复用缓存，不再重新 Extract 五千多张图片。若确实想强制重新抽特征，可加：
+
+```bash
+--no-cache-features
 ```

@@ -165,6 +165,63 @@ def batched(items: Sequence[Tuple[Path, int]], batch_size: int) -> Iterable[Sequ
         yield items[start : start + batch_size]
 
 
+def build_cache_meta(
+    data_root: Path,
+    split_name: str,
+    backend_name: str,
+    model_desc: str,
+    samples: Sequence[Tuple[Path, int]],
+) -> dict[str, object]:
+    return {
+        "data_root": str(data_root),
+        "split": split_name,
+        "backend": backend_name,
+        "model": model_desc,
+        "samples": [[str(path), int(label)] for path, label in samples],
+    }
+
+
+def load_feature_cache(
+    cache_path: Path,
+    expected_meta: dict[str, object],
+) -> tuple[torch.Tensor, torch.Tensor, List[str]] | None:
+    if not cache_path.exists():
+        return None
+
+    try:
+        payload = torch.load(cache_path, map_location="cpu")
+    except Exception as exc:
+        print(f"Ignore unreadable feature cache: {cache_path} ({exc})")
+        return None
+
+    if not isinstance(payload, dict) or payload.get("meta") != expected_meta:
+        print(f"Ignore stale feature cache: {cache_path}")
+        return None
+
+    print(f"Load feature cache: {cache_path}")
+    return payload["features"].float(), payload["labels"].long(), list(payload["paths"])
+
+
+def save_feature_cache(
+    cache_path: Path,
+    meta: dict[str, object],
+    features: torch.Tensor,
+    labels: torch.Tensor,
+    paths: Sequence[str],
+) -> None:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "meta": meta,
+            "features": features.cpu(),
+            "labels": labels.cpu(),
+            "paths": list(paths),
+        },
+        cache_path,
+    )
+    print(f"Saved feature cache: {cache_path}")
+
+
 @torch.no_grad()
 def extract_features(
     backend: TransformersClipBackend | OpenClipBackend,
@@ -189,6 +246,26 @@ def extract_features(
             print(f"Extract {split_name}: {seen}/{len(samples)} images")
 
     return torch.cat(features_list, dim=0), torch.tensor(labels, dtype=torch.long), paths
+
+
+def extract_or_load_features(
+    backend: TransformersClipBackend | OpenClipBackend,
+    samples: Sequence[Tuple[Path, int]],
+    batch_size: int,
+    split_name: str,
+    cache_path: Path,
+    cache_meta: dict[str, object],
+    use_cache: bool,
+) -> tuple[torch.Tensor, torch.Tensor, List[str]]:
+    if use_cache:
+        cached = load_feature_cache(cache_path, cache_meta)
+        if cached is not None:
+            return cached
+
+    features, labels, paths = extract_features(backend, samples, batch_size, split_name)
+    if use_cache:
+        save_feature_cache(cache_path, cache_meta, features, labels, paths)
+    return features, labels, paths
 
 
 def train_one_epoch(
@@ -264,6 +341,11 @@ def main() -> None:
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--cpu", action="store_true")
+    parser.add_argument(
+        "--no-cache-features",
+        action="store_true",
+        help="Disable feature cache and always re-encode all images.",
+    )
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -289,10 +371,29 @@ def main() -> None:
     print(f"Backend: {args.backend}")
     print(f"Model: {model_desc}")
     print(f"Device: {device}")
+    print(f"Feature cache: {not args.no_cache_features}")
 
     start_time = time.time()
-    train_features, train_labels, _ = extract_features(backend, train_samples, args.batch_size, "train")
-    val_features, val_labels, val_paths = extract_features(backend, val_samples, args.batch_size, "val")
+    train_cache_meta = build_cache_meta(args.data_root, "train", args.backend, model_desc, train_samples)
+    val_cache_meta = build_cache_meta(args.data_root, "val", args.backend, model_desc, val_samples)
+    train_features, train_labels, _ = extract_or_load_features(
+        backend,
+        train_samples,
+        args.batch_size,
+        "train",
+        args.output_dir / "feature_cache_train.pt",
+        train_cache_meta,
+        not args.no_cache_features,
+    )
+    val_features, val_labels, val_paths = extract_or_load_features(
+        backend,
+        val_samples,
+        args.batch_size,
+        "val",
+        args.output_dir / "feature_cache_val.pt",
+        val_cache_meta,
+        not args.no_cache_features,
+    )
 
     train_features = train_features.to(device)
     train_labels = train_labels.to(device)
@@ -363,6 +464,7 @@ def main() -> None:
         "epochs": args.epochs,
         "lr": args.lr,
         "weight_decay": args.weight_decay,
+        "cache_features": not args.no_cache_features,
         "feature_dim": int(train_features.size(1)),
         "trainable_params": sum(p.numel() for p in classifier.parameters() if p.requires_grad),
         "elapsed_seconds": round(elapsed, 2),

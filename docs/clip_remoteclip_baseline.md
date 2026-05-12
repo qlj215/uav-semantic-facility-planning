@@ -116,7 +116,17 @@ outputs/clip_linear_probe/<run_name>/
 ├── confusion_matrix.csv
 ├── predictions.jsonl
 ├── class_to_idx.json
-└── linear_probe.pt
+├── linear_probe.pt
+├── feature_cache_train.pt
+└── feature_cache_val.pt
+```
+
+Feature extraction is cached by default. The first run still needs to encode every image; later runs with the same data, model and output directory reuse `feature_cache_train.pt` and `feature_cache_val.pt`. This is useful when only tuning the linear head settings such as `--epochs`, `--lr` or `--weight-decay`.
+
+To force a fresh extraction:
+
+```bash
+python3 scripts/train_clip_linear_probe.py ... --no-cache-features
 ```
 
 ## Prompt Templates
