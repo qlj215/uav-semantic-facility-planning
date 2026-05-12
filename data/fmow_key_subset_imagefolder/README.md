@@ -46,6 +46,7 @@ python3 后续规划/方案B_D_项目框架/scripts/train_resnet50_baseline.py \
   --epochs 20 \
   --batch-size 64 \
   --image-size 224 \
+  --workers 8 \
   --lr 1e-3 \
   --use-torchvision \
   --pretrained \

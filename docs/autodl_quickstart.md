@@ -50,6 +50,7 @@ python3 scripts/train_resnet50_baseline.py \
   --epochs 20 \
   --batch-size 64 \
   --image-size 224 \
+  --workers 8 \
   --lr 1e-3 \
   --use-torchvision \
   --pretrained \
@@ -63,6 +64,7 @@ python3 scripts/train_resnet50_baseline.py \
   --epochs 10 \
   --batch-size 64 \
   --image-size 224 \
+  --workers 8 \
   --lr 1e-4 \
   --use-torchvision \
   --pretrained
@@ -73,5 +75,5 @@ For a larger first GPU run:
 ```bash
 python3 scripts/download_fmow_key_subset.py --train-limit 50 --val-limit 10
 python3 scripts/prepare_fmow_imagefolder.py --overwrite
-python3 scripts/train_resnet50_baseline.py --epochs 10 --batch-size 16 --image-size 128
+python3 scripts/train_resnet50_baseline.py --epochs 10 --batch-size 64 --image-size 224 --workers 8
 ```

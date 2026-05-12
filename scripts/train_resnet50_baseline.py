@@ -247,6 +247,7 @@ def main() -> None:
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--image-size", type=int, default=128)
+    parser.add_argument("--workers", type=int, default=0, help="DataLoader worker processes.")
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--cpu", action="store_true")
@@ -264,8 +265,25 @@ def main() -> None:
     num_classes = len(classes)
 
     device = torch.device("cuda" if torch.cuda.is_available() and not args.cpu else "cpu")
-    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=0)
-    val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=0)
+    loader_kwargs = {
+        "num_workers": args.workers,
+        "pin_memory": device.type == "cuda",
+    }
+    if args.workers > 0:
+        loader_kwargs["persistent_workers"] = True
+
+    train_loader = DataLoader(
+        train_set,
+        batch_size=args.batch_size,
+        shuffle=True,
+        **loader_kwargs,
+    )
+    val_loader = DataLoader(
+        val_set,
+        batch_size=args.batch_size,
+        shuffle=False,
+        **loader_kwargs,
+    )
 
     model = build_model(
         num_classes=num_classes,
@@ -285,6 +303,7 @@ def main() -> None:
     print(f"Train images: {len(train_set)}")
     print(f"Val images: {len(val_set)}")
     print(f"Device: {device}")
+    print(f"DataLoader workers: {args.workers}")
     print(f"Model source: {'torchvision' if args.use_torchvision else 'local'}")
     print(f"Pretrained: {args.pretrained}")
     print(f"Freeze backbone: {args.freeze_backbone}")
@@ -336,6 +355,7 @@ def main() -> None:
         "epochs": args.epochs,
         "batch_size": args.batch_size,
         "image_size": args.image_size,
+        "workers": args.workers,
         "device": str(device),
         "model_source": "torchvision" if args.use_torchvision else "local",
         "pretrained": args.pretrained,
