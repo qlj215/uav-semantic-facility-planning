@@ -1,0 +1,48 @@
+# 设施层次化类别体系草案
+
+coarse_classes:
+  aviation:
+    description: "航空相关设施"
+    fine_classes:
+      - airport
+      - airport_hangar
+      - airport_terminal
+      - runway
+      - helipad
+
+  port_and_maritime:
+    description: "港口与海事设施"
+    fine_classes:
+      - port
+      - shipyard
+
+  energy_and_industry:
+    description: "能源与工业设施"
+    fine_classes:
+      - storage_tank
+      - oil_or_gas_facility
+      - factory_or_powerplant
+      - nuclear_powerplant
+      - electric_substation
+      - solar_farm
+      - wind_farm
+
+  security_and_public:
+    description: "安全与公共设施"
+    fine_classes:
+      - military_facility
+      - prison
+      - police_station
+      - border_checkpoint
+
+  civilian_background:
+    description: "民用背景和干扰项"
+    fine_classes:
+      - office_building
+      - educational_institution
+      - hospital
+      - shopping_mall
+      - single-unit_residential
+      - multi-unit_residential
+      - park
+

@@ -1,0 +1,28 @@
+# 语义航路规划配置草案
+
+grid:
+  width: 40
+  height: 25
+  diagonal_move: false
+
+costs:
+  free: 1.0
+  obstacle: 999999
+  low_risk: 3.0
+  medium_risk: 8.0
+  high_risk: 20.0
+  review_zone: 2.0
+
+semantic_mapping:
+  high_confidence_risk:
+    risk_cost: high_risk
+    radius: 3
+  uncertain_candidate:
+    risk_cost: medium_risk
+    review_cost: review_zone
+    radius: 2
+
+planner:
+  algorithm: astar
+  objective: "minimize distance + semantic risk cost"
+

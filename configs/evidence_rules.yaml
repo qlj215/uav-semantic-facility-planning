@@ -1,0 +1,55 @@
+# 证据融合规则草案
+# 第一版使用规则加权，后续可以替换为可学习融合模型。
+
+facility_evidence:
+  airport:
+    positive:
+      aircraft: 0.30
+      runway: 0.35
+      airport_hangar: 0.20
+      vehicle: 0.05
+    review_threshold: 0.55
+
+  runway:
+    positive:
+      runway: 0.50
+      aircraft: 0.20
+      vehicle: 0.05
+    review_threshold: 0.55
+
+  port:
+    positive:
+      ship: 0.35
+      harbor: 0.30
+      storage_tank: 0.10
+      vehicle: 0.05
+    review_threshold: 0.55
+
+  storage_tank:
+    positive:
+      storage_tank: 0.45
+      vehicle: 0.05
+    review_threshold: 0.60
+
+  oil_or_gas_facility:
+    positive:
+      storage_tank: 0.30
+      industrial_building: 0.20
+      vehicle: 0.05
+    review_threshold: 0.60
+
+  military_facility:
+    positive:
+      aircraft: 0.20
+      vehicle: 0.15
+      runway: 0.15
+      storage_tank: 0.10
+    review_threshold: 0.65
+
+fusion:
+  base_facility_weight: 0.70
+  evidence_weight: 0.30
+  max_evidence_bonus: 0.30
+  high_confidence_threshold: 0.75
+  low_confidence_threshold: 0.45
+

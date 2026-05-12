@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Local logs and temporary files
+*.log
+*.tmp
+.DS_Store
+
+# Large datasets and generated artifacts
+data/manifests/*.bz2
+data/fmow_key_subset/train/
+data/fmow_key_subset/val/
+data/fmow_key_subset/manifests/*.jsonl
+data/fmow_key_subset/manifests/*.json
+data/fmow_key_subset_imagefolder/train/
+data/fmow_key_subset_imagefolder/val/
+data/fmow_key_subset_imagefolder/manifest.jsonl
+data/fmow_key_subset_imagefolder/class_to_idx.json
+data/fmow_key_subset_imagefolder/summary.json
+outputs/
+
+# Model weights
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+!data/README.md
+!data/fmow_key_subset/README.md
+!data/fmow_key_subset_imagefolder/README.md
+
