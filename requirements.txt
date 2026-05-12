@@ -1,5 +1,6 @@
 numpy
+open-clip-torch
 Pillow
 PyYAML
 torch
-
+transformers

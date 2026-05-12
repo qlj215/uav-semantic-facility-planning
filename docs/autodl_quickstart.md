@@ -70,6 +70,46 @@ python3 scripts/train_resnet50_baseline.py \
   --pretrained
 ```
 
+## 5. CLIP / RemoteCLIP Zero-Shot Baseline
+
+Install optional dependencies:
+
+```bash
+python3 -m pip install transformers open-clip-torch
+```
+
+HuggingFace CLIP:
+
+```bash
+python3 scripts/eval_clip_zero_shot.py \
+  --backend transformers \
+  --model-id openai/clip-vit-base-patch32 \
+  --batch-size 32 \
+  --output-dir outputs/clip_vit_b32_zeroshot
+```
+
+OpenCLIP:
+
+```bash
+python3 scripts/eval_clip_zero_shot.py \
+  --backend open_clip \
+  --open-clip-model ViT-B-32 \
+  --open-clip-pretrained openai \
+  --batch-size 32 \
+  --output-dir outputs/openclip_vit_b32_zeroshot
+```
+
+RemoteCLIP:
+
+```bash
+python3 scripts/eval_clip_zero_shot.py \
+  --backend open_clip \
+  --open-clip-model ViT-B-32 \
+  --open-clip-pretrained /path/to/RemoteCLIP-ViT-B-32.pt \
+  --batch-size 32 \
+  --output-dir outputs/remoteclip_vit_b32_zeroshot
+```
+
 For a larger first GPU run:
 
 ```bash

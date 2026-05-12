@@ -89,3 +89,37 @@ python3 后续规划/方案B_D_项目框架/scripts/train_resnet50_baseline.py \
 2. 用 DOTA / DIOR / FAIR1M / xView / RarePlanes 训练目标检测模型，输出目标框、类别和置信度。
 3. 将二者转成 `src/evidence_fusion.py` 中的 `FacilityPrediction` 和 `DetectionEvidence`。
 4. 将融合分数写入栅格或地图图层，交给 `src/semantic_grid_planner.py` 规划路径。
+
+## CLIP / RemoteCLIP Zero-Shot
+
+HuggingFace CLIP：
+
+```bash
+python3 scripts/eval_clip_zero_shot.py \
+  --backend transformers \
+  --model-id openai/clip-vit-base-patch32 \
+  --batch-size 32 \
+  --output-dir outputs/clip_vit_b32_zeroshot
+```
+
+OpenCLIP：
+
+```bash
+python3 scripts/eval_clip_zero_shot.py \
+  --backend open_clip \
+  --open-clip-model ViT-B-32 \
+  --open-clip-pretrained openai \
+  --batch-size 32 \
+  --output-dir outputs/openclip_vit_b32_zeroshot
+```
+
+RemoteCLIP 权重可通过 OpenCLIP 后端接入。下载 RemoteCLIP checkpoint 后，将 `--open-clip-pretrained` 指向本地权重路径即可：
+
+```bash
+python3 scripts/eval_clip_zero_shot.py \
+  --backend open_clip \
+  --open-clip-model ViT-B-32 \
+  --open-clip-pretrained /path/to/RemoteCLIP-ViT-B-32.pt \
+  --batch-size 32 \
+  --output-dir outputs/remoteclip_vit_b32_zeroshot
+```
