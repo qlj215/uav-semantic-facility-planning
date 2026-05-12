@@ -65,7 +65,22 @@ python3 后续规划/方案B_D_项目框架/scripts/prepare_fmow_imagefolder.py 
 python3 后续规划/方案B_D_项目框架/scripts/train_resnet50_baseline.py --epochs 1 --batch-size 4 --image-size 96 --cpu
 ```
 
-说明：当前 baseline 使用随机初始化 ResNet-50，只验证数据读取、训练、评估和输出链路。由于 starter 子集每类训练图只有 5 张，结果不代表正式性能。
+说明：默认 baseline 使用随机初始化 ResNet-50，只验证数据读取、训练、评估和输出链路。由于 starter 子集每类训练图只有 5 张，结果不代表正式性能。
+
+如果已安装 `torchvision`，可以启用 ImageNet 预训练权重：
+
+```bash
+python3 后续规划/方案B_D_项目框架/scripts/train_resnet50_baseline.py \
+  --epochs 20 \
+  --batch-size 64 \
+  --image-size 224 \
+  --lr 1e-3 \
+  --use-torchvision \
+  --pretrained \
+  --freeze-backbone
+```
+
+其中 `--freeze-backbone` 表示只训练最后的分类头。去掉该参数即可全量微调，建议把学习率降到 `1e-4`。
 
 ## 后续接入真实模型
 

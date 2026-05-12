@@ -39,9 +39,21 @@ python3 后续规划/方案B_D_项目框架/scripts/prepare_fmow_imagefolder.py 
 python3 后续规划/方案B_D_项目框架/scripts/train_resnet50_baseline.py --epochs 1 --batch-size 4 --image-size 96 --cpu
 ```
 
+使用 torchvision 预训练权重：
+
+```bash
+python3 后续规划/方案B_D_项目框架/scripts/train_resnet50_baseline.py \
+  --epochs 20 \
+  --batch-size 64 \
+  --image-size 224 \
+  --lr 1e-3 \
+  --use-torchvision \
+  --pretrained \
+  --freeze-backbone
+```
+
 输出目录：
 
 ```text
 后续规划/方案B_D_项目框架/outputs/fmow_resnet50_baseline/
 ```
-

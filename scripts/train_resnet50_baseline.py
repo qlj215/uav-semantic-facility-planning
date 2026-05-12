@@ -153,6 +153,43 @@ def resnet50(num_classes: int) -> ResNet:
     return ResNet([3, 4, 6, 3], num_classes)
 
 
+def build_model(
+    num_classes: int,
+    use_torchvision: bool = False,
+    pretrained: bool = False,
+    freeze_backbone: bool = False,
+) -> nn.Module:
+    if not use_torchvision:
+        if pretrained:
+            raise ValueError("--pretrained requires --use-torchvision")
+        if freeze_backbone:
+            raise ValueError("--freeze-backbone requires --use-torchvision")
+        return resnet50(num_classes)
+
+    try:
+        from torchvision import models
+        from torchvision.models import ResNet50_Weights
+    except ImportError as exc:
+        raise ImportError(
+            "torchvision is required for --use-torchvision. "
+            "Install it first, for example: pip install torchvision"
+        ) from exc
+
+    weights = ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
+    model = models.resnet50(weights=weights)
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+    if freeze_backbone:
+        for name, param in model.named_parameters():
+            param.requires_grad = name.startswith("fc.")
+
+    return model
+
+
+def count_trainable_params(model: nn.Module) -> int:
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
 def compute_confusion(y_true: Iterable[int], y_pred: Iterable[int], num_classes: int) -> np.ndarray:
     cm = np.zeros((num_classes, num_classes), dtype=np.int64)
     for true, pred in zip(y_true, y_pred):
@@ -213,6 +250,9 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--cpu", action="store_true")
+    parser.add_argument("--use-torchvision", action="store_true", help="Use torchvision's ResNet-50 implementation.")
+    parser.add_argument("--pretrained", action="store_true", help="Use ImageNet pretrained weights. Requires --use-torchvision.")
+    parser.add_argument("--freeze-backbone", action="store_true", help="Train only the final fc layer. Requires --use-torchvision.")
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -227,16 +267,30 @@ def main() -> None:
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=0)
 
-    model = resnet50(num_classes).to(device)
+    model = build_model(
+        num_classes=num_classes,
+        use_torchvision=args.use_torchvision,
+        pretrained=args.pretrained,
+        freeze_backbone=args.freeze_backbone,
+    ).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(
+        [p for p in model.parameters() if p.requires_grad],
+        lr=args.lr,
+        weight_decay=1e-4,
+    )
 
     print(f"Data root: {args.data_root}")
     print(f"Classes: {num_classes}")
     print(f"Train images: {len(train_set)}")
     print(f"Val images: {len(val_set)}")
     print(f"Device: {device}")
-    print("Note: this starter run uses random initialization. It verifies the pipeline, not final accuracy.")
+    print(f"Model source: {'torchvision' if args.use_torchvision else 'local'}")
+    print(f"Pretrained: {args.pretrained}")
+    print(f"Freeze backbone: {args.freeze_backbone}")
+    print(f"Trainable params: {count_trainable_params(model) / 1e6:.2f}M")
+    if not args.pretrained:
+        print("Note: this run uses random initialization. Use --use-torchvision --pretrained for a stronger baseline.")
 
     history = []
     start_time = time.time()
@@ -283,10 +337,14 @@ def main() -> None:
         "batch_size": args.batch_size,
         "image_size": args.image_size,
         "device": str(device),
+        "model_source": "torchvision" if args.use_torchvision else "local",
+        "pretrained": args.pretrained,
+        "freeze_backbone": args.freeze_backbone,
+        "trainable_params": count_trainable_params(model),
         "elapsed_seconds": round(elapsed, 2),
         "final": final_metrics,
         "history": history,
-        "note": "Starter baseline with random initialization; use larger data and pretrained weights for meaningful accuracy.",
+        "note": "Use torchvision pretrained weights and larger data for meaningful accuracy.",
     }
 
     (args.output_dir / "metrics.json").write_text(
