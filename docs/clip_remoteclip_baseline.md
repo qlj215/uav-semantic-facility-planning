@@ -34,7 +34,7 @@ python3 scripts/eval_clip_zero_shot.py \
 
 ## RemoteCLIP
 
-RemoteCLIP uses the OpenCLIP model interface. Download the checkpoint from the official RemoteCLIP repository or HuggingFace mirror, then pass the checkpoint path:
+RemoteCLIP uses the OpenCLIP model interface. Download the checkpoint from the official RemoteCLIP repository or HuggingFace mirror first, then pass the checkpoint path:
 
 ```bash
 python3 scripts/eval_clip_zero_shot.py \
@@ -46,6 +46,23 @@ python3 scripts/eval_clip_zero_shot.py \
 ```
 
 If using a HuggingFace OpenCLIP-compatible model, pass the hub id accepted by `open_clip`.
+
+## Run Three Baselines
+
+```bash
+bash scripts/run_clip_three_baselines.sh
+```
+
+If the RemoteCLIP checkpoint has already been downloaded:
+
+```bash
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+REMOTECLIP_CKPT=/root/autodl-tmp/models/RemoteCLIP-ViT-B-32.pt \
+BATCH_SIZE=32 \
+bash scripts/run_clip_three_baselines.sh
+```
+
+If `REMOTECLIP_CKPT` is not set, the script runs HuggingFace CLIP and OpenCLIP, then skips RemoteCLIP with a clear message.
 
 ## Prompt Templates
 
@@ -64,4 +81,3 @@ python3 scripts/eval_clip_zero_shot.py \
   --prompt-template "a satellite image of a {label}." \
   --prompt-template "a remote sensing image of a {label} facility."
 ```
-

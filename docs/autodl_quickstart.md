@@ -125,6 +125,23 @@ python3 scripts/eval_clip_zero_shot.py \
   --output-dir outputs/remoteclip_vit_b32_zeroshot
 ```
 
+Run all available CLIP baselines:
+
+```bash
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+BATCH_SIZE=32 \
+bash scripts/run_clip_three_baselines.sh
+```
+
+RemoteCLIP needs a checkpoint in advance. If you have downloaded it:
+
+```bash
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+REMOTECLIP_CKPT=/root/autodl-tmp/models/RemoteCLIP-ViT-B-32.pt \
+BATCH_SIZE=32 \
+bash scripts/run_clip_three_baselines.sh
+```
+
 For a larger first GPU run:
 
 ```bash

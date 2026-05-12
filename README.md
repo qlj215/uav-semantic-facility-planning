@@ -129,3 +129,13 @@ python3 scripts/eval_clip_zero_shot.py \
   --batch-size 32 \
   --output-dir outputs/remoteclip_vit_b32_zeroshot
 ```
+
+也可以依次运行 HuggingFace CLIP、OpenCLIP 和 RemoteCLIP：
+
+```bash
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+REMOTECLIP_CKPT=/root/autodl-tmp/models/RemoteCLIP-ViT-B-32.pt \
+bash scripts/run_clip_three_baselines.sh
+```
+
+如果不设置 `REMOTECLIP_CKPT`，脚本会跳过 RemoteCLIP，只运行前两个 CLIP baseline。
