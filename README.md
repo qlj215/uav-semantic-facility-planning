@@ -287,4 +287,16 @@ python3 scripts/eval_vlm_hpe.py \
   --output-dir outputs/vlm_hpe/qwen2_5_vl_7b_hpe_v2
 ```
 
+当前脚本会把 HPE 的 `other_uncertain` 作为合法复核输出记录下来。它会计入解析成功率和 `abstain_rate`，但分类 Accuracy / Macro-F1 中仍按错误处理。若继续重跑修正版，建议输出到：
+
+```bash
+python3 scripts/eval_vlm_hpe.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --subset data/fmow_vlm_eval_subset.jsonl \
+  --prompt-mode hpe \
+  --model-source modelscope \
+  --model-cache-dir /root/autodl-tmp/modelscope_cache \
+  --output-dir outputs/vlm_hpe/qwen2_5_vl_7b_hpe_v3
+```
+
 如中途断开，可在相同输出目录下加 `--resume` 续跑。

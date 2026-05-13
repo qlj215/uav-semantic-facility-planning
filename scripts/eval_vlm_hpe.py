@@ -36,6 +36,15 @@ CLASSES = [
     "shipyard",
     "storage_tank",
 ]
+ABSTAIN_LABEL = "other_uncertain"
+PRED_CLASSES = CLASSES + [ABSTAIN_LABEL]
+ABSTAIN_ALIASES = {
+    "",
+    "other_uncertain",
+    "uncertain",
+    "unknown",
+    "use only when the image is too ambiguous",
+}
 
 COARSE_TO_FINE = {
     "aviation": ["airport", "airport_hangar", "airport_terminal", "runway"],
@@ -47,7 +56,7 @@ COARSE_TO_FINE = {
         "electric_substation",
     ],
     "security_military": ["military_facility", "prison"],
-    "other_uncertain": CLASSES,
+    ABSTAIN_LABEL: CLASSES,
 }
 
 
@@ -88,12 +97,13 @@ def load_done_images(predictions_path: Path) -> set[str]:
     return done
 
 
-def load_existing_predictions(predictions_path: Path) -> tuple[list[int], list[int], int]:
+def load_existing_predictions(predictions_path: Path) -> tuple[list[int], list[int], int, int]:
     if not predictions_path.exists():
-        return [], [], 0
+        return [], [], 0, 0
     y_true: list[int] = []
     y_pred: list[int] = []
     review_count = 0
+    abstain_count = 0
     with predictions_path.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -105,13 +115,15 @@ def load_existing_predictions(predictions_path: Path) -> tuple[list[int], list[i
                 continue
             true_label = row.get("true_label")
             pred_label = row.get("pred_label")
-            if true_label in CLASSES and pred_label in CLASSES:
+            if true_label in CLASSES and pred_label in PRED_CLASSES:
                 y_true.append(CLASSES.index(str(true_label)))
-                y_pred.append(CLASSES.index(str(pred_label)))
+                y_pred.append(PRED_CLASSES.index(str(pred_label)))
                 parsed = row.get("parsed")
                 if isinstance(parsed, dict) and bool(parsed.get("need_review", False)):
                     review_count += 1
-    return y_true, y_pred, review_count
+                if pred_label == ABSTAIN_LABEL:
+                    abstain_count += 1
+    return y_true, y_pred, review_count, abstain_count
 
 
 def resolve_image_path(data_root: Path, image_value: object) -> Path:
@@ -160,7 +172,7 @@ Classify this aerial or satellite image using hierarchical prompt engineering.
 
 Level 1: choose one coarse_label:
 {coarse_text}
-- other_uncertain: use only when the image is too ambiguous
+- other_uncertain: use only when the image is too ambiguous or should be reviewed
 
 Level 2: choose one fine_label from this exact list:
 [{fine_text}]
@@ -177,9 +189,9 @@ Key distinction rules:
 
 Rules:
 - Return JSON only.
-- fine_label must be exactly one category name from the fine_label list.
+- fine_label must be exactly one category name from the fine_label list, or "other_uncertain" if no class is reliable.
 - coarse_label must be consistent with fine_label unless the image is highly ambiguous.
-- need_review should be true if the image may be confused with another facility class.
+- need_review should be true if the image may be confused with another facility class or fine_label is "other_uncertain".
 - evidence must be a short string, not a list.
 - Do not add markdown, comments, or extra text.
 
@@ -223,18 +235,28 @@ def parse_prediction(raw_text: str, prompt_mode: str) -> tuple[dict[str, object]
         raise ValueError("Missing predicted label")
     label = label.strip()
     if label not in CLASSES:
+        coarse = obj.get("coarse_label")
+        if prompt_mode == "hpe" and (label.lower() in ABSTAIN_ALIASES or coarse == ABSTAIN_LABEL):
+            label = ABSTAIN_LABEL
+            obj["need_review"] = True
+        else:
+            raise ValueError(f"Invalid predicted label: {label!r}")
+
+    if label not in PRED_CLASSES:
         raise ValueError(f"Invalid predicted label: {label!r}")
 
     obj["pred_label"] = label
     if prompt_mode == "hpe":
         coarse = obj.get("coarse_label")
-        if not isinstance(coarse, str) or coarse not in COARSE_TO_FINE:
+        if label == ABSTAIN_LABEL:
+            obj["coarse_label"] = ABSTAIN_LABEL
+        elif not isinstance(coarse, str) or coarse not in COARSE_TO_FINE:
             obj["coarse_label"] = class_to_coarse(label)
     return obj, label
 
 
-def compute_confusion(y_true: Iterable[int], y_pred: Iterable[int], num_classes: int) -> np.ndarray:
-    cm = np.zeros((num_classes, num_classes), dtype=np.int64)
+def compute_confusion(y_true: Iterable[int], y_pred: Iterable[int], num_true_classes: int, num_pred_classes: int) -> np.ndarray:
+    cm = np.zeros((num_true_classes, num_pred_classes), dtype=np.int64)
     for true, pred in zip(y_true, y_pred):
         cm[int(true), int(pred)] += 1
     return cm
@@ -242,7 +264,7 @@ def compute_confusion(y_true: Iterable[int], y_pred: Iterable[int], num_classes:
 
 def metrics_from_confusion(cm: np.ndarray) -> dict[str, object]:
     total = int(cm.sum())
-    correct = int(np.trace(cm))
+    correct = int(sum(cm[idx, idx] for idx in range(len(CLASSES))))
     accuracy = correct / total if total else 0.0
     f1_scores = []
     recalls: dict[str, float] = {}
@@ -265,7 +287,7 @@ def metrics_from_confusion(cm: np.ndarray) -> dict[str, object]:
 def write_confusion_csv(path: Path, cm: np.ndarray) -> None:
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["true\\pred"] + CLASSES)
+        writer.writerow(["true\\pred"] + PRED_CLASSES)
         for idx, class_name in enumerate(CLASSES):
             writer.writerow([class_name] + cm[idx].tolist())
 
@@ -429,11 +451,15 @@ def main() -> None:
         use_flash_attention=args.flash_attn,
     )
 
-    y_true, y_pred, existing_review_count = load_existing_predictions(predictions_path) if args.resume else ([], [], 0)
+    if args.resume:
+        y_true, y_pred, existing_review_count, existing_abstain_count = load_existing_predictions(predictions_path)
+    else:
+        y_true, y_pred, existing_review_count, existing_abstain_count = [], [], 0, 0
     new_seen = 0
     new_parsed_ok = 0
     bad_count = 0
     review_count = existing_review_count
+    abstain_count = existing_abstain_count
     start_time = time.time()
 
     print(f"Model: {args.model_id}")
@@ -464,9 +490,11 @@ def main() -> None:
             new_parsed_ok += 1
             if bool(parsed.get("need_review", False)):
                 review_count += 1
+            if pred_label == ABSTAIN_LABEL:
+                abstain_count += 1
 
             true_idx = CLASSES.index(true_label)
-            pred_idx = CLASSES.index(pred_label)
+            pred_idx = PRED_CLASSES.index(pred_label)
             y_true.append(true_idx)
             y_pred.append(pred_idx)
             append_jsonl(
@@ -500,10 +528,10 @@ def main() -> None:
             print(f"processed={idx}/{len(samples)} new_parsed_ok={new_parsed_ok} bad={bad_count}")
 
     if y_true:
-        cm = compute_confusion(y_true, y_pred, len(CLASSES))
+        cm = compute_confusion(y_true, y_pred, len(CLASSES), len(PRED_CLASSES))
         final_metrics = metrics_from_confusion(cm)
     else:
-        cm = np.zeros((len(CLASSES), len(CLASSES)), dtype=np.int64)
+        cm = np.zeros((len(CLASSES), len(PRED_CLASSES)), dtype=np.int64)
         final_metrics = {
             "accuracy": 0.0,
             "macro_f1": 0.0,
@@ -516,6 +544,11 @@ def main() -> None:
     total_attempted_this_run = new_seen
     parse_success_rate = total_valid_predictions / total_expected if total_expected else 0.0
     review_rate = review_count / total_valid_predictions if total_valid_predictions else 0.0
+    abstain_rate = abstain_count / total_valid_predictions if total_valid_predictions else 0.0
+    abstain_idx = PRED_CLASSES.index(ABSTAIN_LABEL)
+    non_abstain_total = sum(1 for pred in y_pred if pred != abstain_idx)
+    non_abstain_correct = sum(1 for true, pred in zip(y_true, y_pred) if pred != abstain_idx and true == pred)
+    non_abstain_accuracy = non_abstain_correct / non_abstain_total if non_abstain_total else 0.0
     result = {
         "model": args.model_id,
         "model_source": args.model_source,
@@ -529,8 +562,11 @@ def main() -> None:
         "valid_predictions_this_run": new_parsed_ok,
         "valid_predictions_total": total_valid_predictions,
         "bad_outputs_this_run": bad_count,
+        "abstain_count": abstain_count,
         "parse_success_rate": parse_success_rate,
         "review_rate": review_rate,
+        "abstain_rate": abstain_rate,
+        "non_abstain_accuracy": non_abstain_accuracy,
         "max_new_tokens": args.max_new_tokens,
         "min_pixels": args.min_pixels,
         "max_pixels": args.max_pixels,
@@ -550,6 +586,8 @@ def main() -> None:
     print(f"macro_f1={final_metrics['macro_f1'] * 100:.2f}%")
     print(f"parse_success_rate={parse_success_rate * 100:.2f}%")
     print(f"review_rate={review_rate * 100:.2f}%")
+    print(f"abstain_rate={abstain_rate * 100:.2f}%")
+    print(f"non_abstain_accuracy={non_abstain_accuracy * 100:.2f}%")
     print(f"Saved metrics: {args.output_dir / 'metrics.json'}")
     print(f"Saved predictions: {predictions_path}")
     print(f"Saved bad outputs: {bad_outputs_path}")
