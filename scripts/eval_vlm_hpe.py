@@ -10,8 +10,11 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 import numpy as np
+from PIL import Image
 import torch
 
+
+Image.MAX_IMAGE_PIXELS = None
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_ROOT = ROOT / "data" / "fmow_key_subset_imagefolder"
@@ -162,13 +165,22 @@ Level 1: choose one coarse_label:
 Level 2: choose one fine_label from this exact list:
 [{fine_text}]
 
-Level 3: provide concise visual evidence and decide whether human review is needed.
+Level 3: provide one concise evidence sentence and decide whether human review is needed.
+
+Key distinction rules:
+- airport usually means a complete airport area; runway means the runway itself dominates the image.
+- airport_hangar is usually large aircraft storage buildings; airport_terminal is passenger/service terminal infrastructure.
+- port is a harbor/logistics area; shipyard includes ship construction or repair structures such as docks, slips, or cranes.
+- storage_tank is dominated by tanks; oil_or_gas_facility includes tanks plus industrial processing/pipeline context.
+- factory_or_powerplant has large industrial buildings or chimneys; electric_substation has transformer/switchyard grid structures.
+- military_facility and prison are security compounds; use prison only when the layout strongly suggests a prison.
 
 Rules:
 - Return JSON only.
 - fine_label must be exactly one category name from the fine_label list.
 - coarse_label must be consistent with fine_label unless the image is highly ambiguous.
 - need_review should be true if the image may be confused with another facility class.
+- evidence must be a short string, not a list.
 - Do not add markdown, comments, or extra text.
 
 Return this JSON schema:
@@ -176,7 +188,7 @@ Return this JSON schema:
   "coarse_label": "...",
   "fine_label": "...",
   "confidence": 0.0,
-  "visual_evidence": ["..."],
+  "evidence": "...",
   "uncertainty": "...",
   "need_review": false
 }}
@@ -445,6 +457,7 @@ def main() -> None:
             raise FileNotFoundError(f"Missing image: {image_path}")
 
         new_seen += 1
+        raw_text = ""
         try:
             raw_text = runner.generate(image_path, prompt)
             parsed, pred_label = parse_prediction(raw_text, args.prompt_mode)
@@ -479,6 +492,7 @@ def main() -> None:
                     "true_label": true_label,
                     "prompt_mode": args.prompt_mode,
                     "error": f"{type(exc).__name__}: {exc}",
+                    "raw_output": raw_text,
                 },
             )
 
