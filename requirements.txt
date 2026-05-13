@@ -1,6 +1,8 @@
+accelerate
 numpy
 open-clip-torch
 Pillow
 PyYAML
+qwen-vl-utils
 torch
 transformers

@@ -201,3 +201,55 @@ feature_cache_val.pt
 ```bash
 --no-cache-features
 ```
+
+## VLM Flat / HPE Evaluation
+
+先生成固定 VLM 评测子集：
+
+```bash
+python3 scripts/create_vlm_eval_subset.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --split val \
+  --per-class 30 \
+  --seed 42 \
+  --output data/fmow_vlm_eval_subset.jsonl \
+  --overwrite
+```
+
+安装 Qwen2.5-VL 推理依赖：
+
+```bash
+pip install -U transformers accelerate qwen-vl-utils
+```
+
+先用 5 张图做 smoke test：
+
+```bash
+python3 scripts/eval_vlm_hpe.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --subset data/fmow_vlm_eval_subset.jsonl \
+  --prompt-mode flat \
+  --limit 5
+```
+
+正式跑 flat prompt：
+
+```bash
+python3 scripts/eval_vlm_hpe.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --subset data/fmow_vlm_eval_subset.jsonl \
+  --prompt-mode flat \
+  --output-dir outputs/vlm_hpe/qwen2_5_vl_7b_flat
+```
+
+正式跑 HPE prompt：
+
+```bash
+python3 scripts/eval_vlm_hpe.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --subset data/fmow_vlm_eval_subset.jsonl \
+  --prompt-mode hpe \
+  --output-dir outputs/vlm_hpe/qwen2_5_vl_7b_hpe
+```
+
+如中途断开，可在相同输出目录下加 `--resume` 续跑。
