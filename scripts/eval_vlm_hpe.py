@@ -274,6 +274,8 @@ class Qwen25VLRunner:
     def __init__(
         self,
         model_id: str,
+        model_source: str,
+        model_cache_dir: Path | None,
         max_new_tokens: int,
         min_pixels: int | None,
         max_pixels: int | None,
@@ -290,6 +292,8 @@ class Qwen25VLRunner:
 
         self.max_new_tokens = max_new_tokens
         self.process_vision_info = process_vision_info
+        self.model_source = model_source
+        self.model_path = self.resolve_model_path(model_id, model_source, model_cache_dir)
         processor_kwargs = {}
         if min_pixels is not None:
             processor_kwargs["min_pixels"] = min_pixels
@@ -303,9 +307,34 @@ class Qwen25VLRunner:
         if use_flash_attention:
             model_kwargs["attn_implementation"] = "flash_attention_2"
 
-        self.processor = AutoProcessor.from_pretrained(model_id, **processor_kwargs)
-        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_id, **model_kwargs)
+        self.processor = AutoProcessor.from_pretrained(self.model_path, **processor_kwargs)
+        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(self.model_path, **model_kwargs)
         self.model.eval()
+
+    @staticmethod
+    def resolve_model_path(model_id: str, model_source: str, model_cache_dir: Path | None) -> str:
+        if model_source == "huggingface":
+            return model_id
+        if model_source == "local":
+            model_path = Path(model_id)
+            if not model_path.exists():
+                raise FileNotFoundError(f"Local model path not found: {model_path}")
+            return str(model_path)
+        if model_source == "modelscope":
+            try:
+                from modelscope import snapshot_download
+            except ImportError as exc:
+                raise ImportError(
+                    "modelscope is required for --model-source modelscope. "
+                    "Install it with: pip install -U modelscope"
+                ) from exc
+
+            cache_dir = str(model_cache_dir) if model_cache_dir is not None else None
+            print(f"Downloading/loading model from ModelScope: {model_id}")
+            if cache_dir is not None:
+                print(f"ModelScope cache dir: {cache_dir}")
+            return snapshot_download(model_id, cache_dir=cache_dir)
+        raise ValueError(f"Unsupported model source: {model_source}")
 
     @torch.no_grad()
     def generate(self, image_path: Path, prompt: str) -> str:
@@ -339,6 +368,18 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--prompt-mode", choices=["flat", "hpe"], required=True)
     parser.add_argument("--model-id", type=str, default=DEFAULT_MODEL_ID)
+    parser.add_argument(
+        "--model-source",
+        choices=["huggingface", "modelscope", "local"],
+        default="huggingface",
+        help="Where to load the model from. Use modelscope for ModelScope download/cache, local for an existing local directory.",
+    )
+    parser.add_argument(
+        "--model-cache-dir",
+        type=Path,
+        default=None,
+        help="Cache directory for ModelScope. Suggested on AutoDL: /root/autodl-tmp/modelscope_cache",
+    )
     parser.add_argument("--limit", type=int, default=None, help="Optional small-run limit for smoke tests.")
     parser.add_argument("--resume", action="store_true", help="Skip images already present in predictions.jsonl.")
     parser.add_argument("--max-new-tokens", type=int, default=256)
@@ -368,6 +409,8 @@ def main() -> None:
 
     runner = Qwen25VLRunner(
         model_id=args.model_id,
+        model_source=args.model_source,
+        model_cache_dir=args.model_cache_dir,
         max_new_tokens=args.max_new_tokens,
         min_pixels=args.min_pixels,
         max_pixels=args.max_pixels,
@@ -382,6 +425,8 @@ def main() -> None:
     start_time = time.time()
 
     print(f"Model: {args.model_id}")
+    print(f"Model source: {args.model_source}")
+    print(f"Resolved model path: {runner.model_path}")
     print(f"Prompt mode: {args.prompt_mode}")
     print(f"Subset: {args.subset}")
     print(f"Samples: {len(samples)}")
@@ -459,6 +504,8 @@ def main() -> None:
     review_rate = review_count / total_valid_predictions if total_valid_predictions else 0.0
     result = {
         "model": args.model_id,
+        "model_source": args.model_source,
+        "resolved_model_path": runner.model_path,
         "prompt_mode": args.prompt_mode,
         "data_root": str(args.data_root),
         "subset": str(args.subset),

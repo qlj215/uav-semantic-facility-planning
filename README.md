@@ -219,7 +219,7 @@ python3 scripts/create_vlm_eval_subset.py \
 安装 Qwen2.5-VL 推理依赖：
 
 ```bash
-pip install -U transformers accelerate qwen-vl-utils
+pip install -U transformers accelerate qwen-vl-utils modelscope
 ```
 
 先用 5 张图做 smoke test：
@@ -232,6 +232,25 @@ python3 scripts/eval_vlm_hpe.py \
   --limit 5
 ```
 
+如果希望从 ModelScope 下载/缓存 Qwen2.5-VL，加：
+
+```bash
+--model-source modelscope \
+--model-cache-dir /root/autodl-tmp/modelscope_cache
+```
+
+例如：
+
+```bash
+python3 scripts/eval_vlm_hpe.py \
+  --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
+  --subset data/fmow_vlm_eval_subset.jsonl \
+  --prompt-mode flat \
+  --model-source modelscope \
+  --model-cache-dir /root/autodl-tmp/modelscope_cache \
+  --limit 5
+```
+
 正式跑 flat prompt：
 
 ```bash
@@ -239,6 +258,8 @@ python3 scripts/eval_vlm_hpe.py \
   --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
   --subset data/fmow_vlm_eval_subset.jsonl \
   --prompt-mode flat \
+  --model-source modelscope \
+  --model-cache-dir /root/autodl-tmp/modelscope_cache \
   --output-dir outputs/vlm_hpe/qwen2_5_vl_7b_flat
 ```
 
@@ -249,6 +270,8 @@ python3 scripts/eval_vlm_hpe.py \
   --data-root /root/autodl-tmp/data/fmow_key_subset_imagefolder \
   --subset data/fmow_vlm_eval_subset.jsonl \
   --prompt-mode hpe \
+  --model-source modelscope \
+  --model-cache-dir /root/autodl-tmp/modelscope_cache \
   --output-dir outputs/vlm_hpe/qwen2_5_vl_7b_hpe
 ```
 

@@ -4,5 +4,6 @@ open-clip-torch
 Pillow
 PyYAML
 qwen-vl-utils
+modelscope
 torch
 transformers
