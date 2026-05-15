@@ -45,17 +45,20 @@
 
 建议数据：
 
-- DOTA：旋转框目标检测。
-- DIOR：通用遥感目标检测。
-- FAIR1M：细粒度遥感目标识别。
-- RarePlanes：飞机专项证据。
-- xView：车辆、储罐、建筑等补充类别。
+- 第一版：DIOR。只取 `airplane`、`airport`、`harbor`、`ship`、`storagetank`、`vehicle`、`chimney`、`bridge`。
+- 第二版：DOTA。补充旋转框、港口吊机、舰船、车辆等更复杂证据。
+- 后续扩展：FAIR1M / RarePlanes / xView，不作为当前主线起点。
+
+第一版任务不要做大：
+
+```text
+DIOR 标注 -> 证据清单 -> 简单检测 baseline -> 证据融合
+```
 
 建议模型：
 
-- YOLOv8-OBB / YOLOv11-OBB。
-- Oriented R-CNN。
-- ReDet。
+- 第一版优先用普通水平框检测，先证明证据层有效。
+- 后续再考虑 YOLO-OBB / Oriented R-CNN。
 
 核心输出：
 
@@ -135,4 +138,3 @@
 - 真实飞控闭环。
 - 实机部署。
 - 跨视角定位。
-

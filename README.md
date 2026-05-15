@@ -92,9 +92,22 @@ bash 后续规划/方案B_D_项目框架/scripts/run_resnet50_three_baselines.sh
 ## 后续接入真实模型
 
 1. 用 fMoW 训练或评估设施分类模型，输出设施类别和置信度。
-2. 用 DOTA / DIOR / FAIR1M / xView / RarePlanes 训练目标检测模型，输出目标框、类别和置信度。
+2. 先用 DIOR 做小规模目标证据层，输出目标框、类别和置信度；DOTA / FAIR1M / xView 暂时作为后续扩展。
 3. 将二者转成 `src/evidence_fusion.py` 中的 `FacilityPrediction` 和 `DetectionEvidence`。
 4. 将融合分数写入栅格或地图图层，交给 `src/semantic_grid_planner.py` 规划路径。
+
+## DIOR 目标证据层
+
+当前建议先把 DIOR 中的少量相关类别转成证据清单：
+
+```bash
+python3 scripts/prepare_dior_evidence_manifest.py \
+  --dior-root /root/autodl-tmp/data/DIOR \
+  --splits train val \
+  --output-dir data/manifests/dior_evidence
+```
+
+这个步骤只生成清单，不训练检测模型。详细说明见 `docs/dior_evidence_layer.md`。
 
 ## CLIP / RemoteCLIP Zero-Shot
 

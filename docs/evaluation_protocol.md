@@ -22,26 +22,27 @@
 
 ## 2. 目标证据检测评估
 
-数据：DOTA / DIOR / FAIR1M / xView / RarePlanes。
+数据：第一版使用 DIOR 小规模相关类别；DOTA / FAIR1M / xView / RarePlanes 作为后续扩展。
 
 指标：
 
 - mAP。
 - AP50 / AP75。
 - 小目标 AP。
-- 旋转框 mAP，若使用 DOTA / FAIR1M。
+- 旋转框 mAP 只在后续使用 DOTA / FAIR1M 时统计。
 - 关键证据类别召回率。
 
 关键证据类别：
 
 ```text
-aircraft
+aircraft / airplane
+airport_region
 ship
 vehicle
 storage_tank
+industrial_chimney
 bridge
 harbor
-runway-like region
 ```
 
 ## 3. 证据融合评估
@@ -95,4 +96,3 @@ runway-like region
 - 证据融合流程图。
 - 语义代价地图。
 - 传统路径 vs 语义路径对比图。
-

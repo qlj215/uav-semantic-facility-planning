@@ -5,6 +5,7 @@ facility_evidence:
   airport:
     positive:
       aircraft: 0.30
+      airport_region: 0.25
       runway: 0.35
       airport_hangar: 0.20
       vehicle: 0.05
@@ -35,6 +36,14 @@ facility_evidence:
     positive:
       storage_tank: 0.30
       industrial_building: 0.20
+      industrial_chimney: 0.15
+      vehicle: 0.05
+    review_threshold: 0.60
+
+  factory_or_powerplant:
+    positive:
+      industrial_chimney: 0.25
+      storage_tank: 0.10
       vehicle: 0.05
     review_threshold: 0.60
 
@@ -52,4 +61,3 @@ fusion:
   max_evidence_bonus: 0.30
   high_confidence_threshold: 0.75
   low_confidence_threshold: 0.45
-

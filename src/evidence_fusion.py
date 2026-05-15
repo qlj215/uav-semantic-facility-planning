@@ -29,11 +29,27 @@ class FusionResult:
 
 
 DEFAULT_EVIDENCE_RULES: Dict[str, Dict[str, float]] = {
-    "airport": {"aircraft": 0.30, "runway": 0.35, "airport_hangar": 0.20, "vehicle": 0.05},
+    "airport": {
+        "aircraft": 0.30,
+        "airport_region": 0.25,
+        "runway": 0.35,
+        "airport_hangar": 0.20,
+        "vehicle": 0.05,
+    },
     "runway": {"runway": 0.50, "aircraft": 0.20, "vehicle": 0.05},
     "port": {"ship": 0.35, "harbor": 0.30, "storage_tank": 0.10, "vehicle": 0.05},
     "storage_tank": {"storage_tank": 0.45, "vehicle": 0.05},
-    "oil_or_gas_facility": {"storage_tank": 0.30, "industrial_building": 0.20, "vehicle": 0.05},
+    "oil_or_gas_facility": {
+        "storage_tank": 0.30,
+        "industrial_building": 0.20,
+        "industrial_chimney": 0.15,
+        "vehicle": 0.05,
+    },
+    "factory_or_powerplant": {
+        "industrial_chimney": 0.25,
+        "storage_tank": 0.10,
+        "vehicle": 0.05,
+    },
     "military_facility": {"aircraft": 0.20, "vehicle": 0.15, "runway": 0.15, "storage_tank": 0.10},
 }
 
@@ -89,4 +105,3 @@ def fuse_facility_and_evidence(
         evidence_summary=evidence_summary,
         center_xy=facility.center_xy,
     )
-

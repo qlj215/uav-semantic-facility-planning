@@ -9,6 +9,7 @@ env/
 *.log
 *.tmp
 .DS_Store
+*.lnk
 
 # Large datasets and generated artifacts
 data/manifests/*.bz2
@@ -22,6 +23,7 @@ data/fmow_key_subset_imagefolder/manifest.jsonl
 data/fmow_key_subset_imagefolder/class_to_idx.json
 data/fmow_key_subset_imagefolder/summary.json
 outputs/
+presentations/
 
 # Model weights
 *.pt
@@ -32,4 +34,3 @@ outputs/
 !data/README.md
 !data/fmow_key_subset/README.md
 !data/fmow_key_subset_imagefolder/README.md
-

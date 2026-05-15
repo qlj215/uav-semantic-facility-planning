@@ -11,8 +11,8 @@
 
 目标证据检测：
 
-- DOTA：旋转框检测，适合飞机、舰船、桥梁、港口、车辆等。
-- DIOR：20 类遥感目标检测。
+- DIOR：20 类遥感目标检测，先作为第一版小规模目标证据层。
+- DOTA：旋转框检测，适合飞机、舰船、桥梁、港口、车辆等，作为第二步扩展。
 - FAIR1M：细粒度、大规模遥感目标识别。
 - xView：大规模卫星目标检测。
 - RarePlanes：飞机专项检测。
@@ -49,6 +49,12 @@ data/
 {"image": "path/to/image.jpg", "detections": [{"class_name": "aircraft", "confidence": 0.91, "bbox": [10, 20, 80, 120]}]}
 ```
 
+DIOR 证据清单 jsonl：
+
+```json
+{"dataset": "DIOR", "image": "path/to/image.jpg", "evidence_objects": [{"class_name": "ship", "source_label": "ship", "bbox_xyxy": [10, 20, 80, 120]}], "evidence_counts": {"ship": 1}}
+```
+
 融合输入 jsonl：
 
 ```json
@@ -58,4 +64,3 @@ data/
   "detections": [{"class_name": "aircraft", "confidence": 0.91, "bbox": [10, 20, 80, 120]}]
 }
 ```
-
