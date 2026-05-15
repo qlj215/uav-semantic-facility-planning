@@ -22,6 +22,14 @@ fMoW 分类结果 + DIOR 目标证据
 
 ## 生成 DIOR 证据清单
 
+如果 AutoDL 上还没有 DIOR，先下载并解压：
+
+```bash
+bash scripts/download_and_extract_dior.sh \
+  --data-root /root/autodl-tmp/data/DIOR \
+  --prepare-manifest
+```
+
 假设 DIOR 已放在 `/root/autodl-tmp/data/DIOR`：
 
 ```bash

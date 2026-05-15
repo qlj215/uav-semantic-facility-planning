@@ -98,6 +98,14 @@ bash 后续规划/方案B_D_项目框架/scripts/run_resnet50_three_baselines.sh
 
 ## DIOR 目标证据层
 
+下载并解压 DIOR：
+
+```bash
+bash scripts/download_and_extract_dior.sh \
+  --data-root /root/autodl-tmp/data/DIOR \
+  --prepare-manifest
+```
+
 当前建议先把 DIOR 中的少量相关类别转成证据清单：
 
 ```bash
