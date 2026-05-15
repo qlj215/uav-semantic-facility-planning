@@ -40,11 +40,27 @@ python3 scripts/prepare_dior_evidence_manifest.py \
   --limit 20
 ```
 
+如果你的 DIOR 解压包没有 `ImageSets/Main/train.txt`、`val.txt` 这类划分文件，直接扫描全部 XML：
+
+```bash
+python3 scripts/prepare_dior_evidence_manifest.py \
+  --dior-root /root/autodl-tmp/data/DIOR \
+  --scan-all \
+  --output-dir data/manifests/dior_evidence
+```
+
 输出：
 
 ```text
 data/manifests/dior_evidence/train.jsonl
 data/manifests/dior_evidence/val.jsonl
+data/manifests/dior_evidence/summary.json
+```
+
+使用 `--scan-all` 时输出为：
+
+```text
+data/manifests/dior_evidence/all.jsonl
 data/manifests/dior_evidence/summary.json
 ```
 

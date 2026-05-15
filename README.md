@@ -109,6 +109,15 @@ python3 scripts/prepare_dior_evidence_manifest.py \
 
 这个步骤只生成清单，不训练检测模型。详细说明见 `docs/dior_evidence_layer.md`。
 
+如果 DIOR 解压包没有 `ImageSets/Main/train.txt` 和 `val.txt`，可以先用扫描模式生成一个总清单：
+
+```bash
+python3 scripts/prepare_dior_evidence_manifest.py \
+  --dior-root /root/autodl-tmp/data/DIOR \
+  --scan-all \
+  --output-dir data/manifests/dior_evidence
+```
+
 ## CLIP / RemoteCLIP Zero-Shot
 
 HuggingFace CLIP：

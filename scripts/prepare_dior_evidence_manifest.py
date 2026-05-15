@@ -15,6 +15,14 @@ DEFAULT_CONFIG = ROOT / "configs" / "dior_evidence_classes.json"
 DEFAULT_OUTPUT_DIR = ROOT / "data" / "manifests" / "dior_evidence"
 
 
+def infer_dataset_root(path: Path, fallback: Path) -> Path:
+    parts = path.parts
+    for i, part in enumerate(parts):
+        if part.lower() == "imagesets" and i > 0:
+            return Path(*parts[:i])
+    return fallback
+
+
 def normalize_label(label: str) -> str:
     return label.strip().lower().replace("-", "_").replace(" ", "_")
 
@@ -25,17 +33,46 @@ def load_class_map(config_path: Path) -> dict[str, str]:
     return {normalize_label(k): normalize_label(v) for k, v in raw_map.items()}
 
 
-def find_split_file(dior_root: Path, split: str) -> Path:
-    candidates = [
-        dior_root / "ImageSets" / "Main" / f"{split}.txt",
-        dior_root / "ImageSets" / f"{split}.txt",
-        dior_root / f"{split}.txt",
-    ]
+def split_name_candidates(split: str) -> list[str]:
+    names = [split]
+    if split == "train":
+        names.append("trainval")
+    elif split in {"val", "valid", "validation"}:
+        names.extend(["val", "test"])
+    return list(dict.fromkeys(names))
+
+
+def find_split_file(dior_root: Path, split: str) -> tuple[Path, Path, str]:
+    candidates: list[Path] = []
+    for name in split_name_candidates(split):
+        candidates.extend(
+            [
+                dior_root / "ImageSets" / "Main" / f"{name}.txt",
+                dior_root / "ImageSets" / f"{name}.txt",
+                dior_root / f"{name}.txt",
+            ]
+        )
+
     for path in candidates:
         if path.exists():
-            return path
+            return path, infer_dataset_root(path, dior_root), path.stem
+
+    recursive_matches: list[Path] = []
+    for name in split_name_candidates(split):
+        recursive_matches.extend(dior_root.rglob(f"{name}.txt"))
+    recursive_matches = sorted(
+        recursive_matches,
+        key=lambda p: ("imagesets" not in str(p).lower(), len(p.parts), str(p)),
+    )
+    if recursive_matches:
+        path = recursive_matches[0]
+        return path, infer_dataset_root(path, dior_root), path.stem
+
     searched = "\n".join(str(p) for p in candidates)
-    raise FileNotFoundError(f"Cannot find split file for '{split}'. Searched:\n{searched}")
+    raise FileNotFoundError(
+        f"Cannot find split file for '{split}'. Searched:\n{searched}\n"
+        "If your DIOR copy has no split txt files, rerun with --scan-all."
+    )
 
 
 def read_image_ids(split_file: Path) -> list[str]:
@@ -59,6 +96,19 @@ def find_annotation(dior_root: Path, image_id: str) -> Path:
     for path in candidates:
         if path.exists():
             return path
+
+    matches = sorted(dior_root.rglob(f"{image_id}.xml"))
+    if matches:
+        matches.sort(
+            key=lambda p: (
+                "annotations" not in str(p).lower(),
+                "horizontal" not in str(p).lower(),
+                len(p.parts),
+                str(p),
+            )
+        )
+        return matches[0]
+
     raise FileNotFoundError(f"Missing annotation XML for image id: {image_id}")
 
 
@@ -86,7 +136,37 @@ def find_image(dior_root: Path, image_id: str, xml_root: ET.Element) -> Path:
             if path.exists():
                 return path
 
+    recursive_matches: list[Path] = []
+    for name in names:
+        if name:
+            recursive_matches.extend(dior_root.rglob(name))
+    if recursive_matches:
+        recursive_matches.sort(key=lambda p: ("jpegimages" not in str(p).lower(), len(p.parts), str(p)))
+        return recursive_matches[0]
+
     raise FileNotFoundError(f"Missing image file for image id: {image_id}")
+
+
+def collect_annotation_image_ids(dior_root: Path) -> list[str]:
+    candidates: list[Path] = []
+    for folder in [
+        "Annotations",
+        "Annotations/Horizontal Bounding Boxes",
+        "Annotations/HorizontalBoundingBoxes",
+        "Annotations/horizontal",
+        "annotations",
+    ]:
+        path = dior_root / folder
+        if path.exists():
+            candidates.extend(path.rglob("*.xml"))
+
+    if not candidates:
+        candidates = list(dior_root.rglob("*.xml"))
+
+    image_ids = {path.stem for path in candidates if "annotation" in str(path).lower()}
+    if not image_ids:
+        image_ids = {path.stem for path in candidates}
+    return sorted(image_ids)
 
 
 def parse_bbox(obj: ET.Element) -> list[int] | None:
@@ -169,6 +249,11 @@ def main() -> None:
     parser.add_argument("--splits", nargs="+", default=["train", "val"], help="DIOR split names.")
     parser.add_argument("--limit", type=int, default=None, help="Optional max images per split after filtering.")
     parser.add_argument("--keep-empty", action="store_true", help="Keep images without selected evidence objects.")
+    parser.add_argument(
+        "--scan-all",
+        action="store_true",
+        help="Ignore split files and scan all annotation XML files into all.jsonl.",
+    )
     args = parser.parse_args()
 
     dior_root = Path(args.dior_root).expanduser().resolve()
@@ -185,9 +270,8 @@ def main() -> None:
         "splits": {},
     }
 
-    for split in args.splits:
-        split_file = find_split_file(dior_root, split)
-        image_ids = read_image_ids(split_file)
+    if args.scan_all:
+        image_ids = collect_annotation_image_ids(dior_root)
         records: list[dict[str, Any]] = []
         evidence_counts: Counter[str] = Counter()
         missing = 0
@@ -195,6 +279,49 @@ def main() -> None:
         for image_id in image_ids:
             try:
                 record = parse_annotation(dior_root, image_id, class_map, args.keep_empty)
+            except FileNotFoundError as exc:
+                missing += 1
+                print(f"[skip] {exc}", file=sys.stderr)
+                continue
+
+            if record is None:
+                continue
+
+            record["split"] = "all"
+            records.append(record)
+            evidence_counts.update(record["evidence_counts"])
+
+            if args.limit is not None and len(records) >= args.limit:
+                break
+
+        out_path = output_dir / "all.jsonl"
+        write_jsonl(records, out_path)
+        summary["splits"]["all"] = {
+            "split_file": None,
+            "output": str(out_path),
+            "records": len(records),
+            "missing_files": missing,
+            "evidence_counts": dict(sorted(evidence_counts.items())),
+        }
+        summary_path = output_dir / "summary.json"
+        summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return
+
+    for split in args.splits:
+        split_file, split_root, actual_split = find_split_file(dior_root, split)
+        if split_root != dior_root:
+            print(f"[info] using nested DIOR root for split '{split}': {split_root}", file=sys.stderr)
+        if actual_split != split:
+            print(f"[info] using split file '{actual_split}.txt' for requested split '{split}'", file=sys.stderr)
+        image_ids = read_image_ids(split_file)
+        records: list[dict[str, Any]] = []
+        evidence_counts: Counter[str] = Counter()
+        missing = 0
+
+        for image_id in image_ids:
+            try:
+                record = parse_annotation(split_root, image_id, class_map, args.keep_empty)
             except FileNotFoundError as exc:
                 missing += 1
                 print(f"[skip] {exc}", file=sys.stderr)
@@ -215,6 +342,7 @@ def main() -> None:
 
         summary["splits"][split] = {
             "split_file": str(split_file),
+            "actual_split": actual_split,
             "output": str(out_path),
             "records": len(records),
             "missing_files": missing,
