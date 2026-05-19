@@ -11,6 +11,7 @@ IMGSZ="${IMGSZ:-640}"
 BATCH="${BATCH:-16}"
 DEVICE="${DEVICE:-0}"
 SAMPLE_PER_CLASS="${SAMPLE_PER_CLASS:-4}"
+VIS_MAX_SIDE="${VIS_MAX_SIDE:-1600}"
 
 if [[ ! -f "${MODEL}" ]]; then
   ALT_MODEL="runs/detect/outputs/dior_yolo/yolov8n_evidence_min/weights/best.pt"
@@ -30,6 +31,7 @@ python3 scripts/infer_fmow_yolo_evidence.py \
   --batch-size "${BATCH}" \
   --device "${DEVICE}" \
   --sample-per-class "${SAMPLE_PER_CLASS}" \
+  --vis-max-side "${VIS_MAX_SIDE}" \
   --overwrite
 
 echo "Done."

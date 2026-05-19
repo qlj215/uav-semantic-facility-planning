@@ -4,12 +4,15 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
+
+Image.MAX_IMAGE_PIXELS = None
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_ROOT = ROOT / "data" / "fmow_key_subset_imagefolder"
@@ -127,16 +130,32 @@ def color_for_class(class_name: str) -> tuple[int, int, int]:
     return palette[sum(ord(ch) for ch in class_name) % len(palette)]
 
 
-def draw_detections(image_path: Path, detections: list[dict[str, Any]], out_path: Path, max_boxes: int) -> None:
+def draw_detections(
+    image_path: Path,
+    detections: list[dict[str, Any]],
+    out_path: Path,
+    max_boxes: int,
+    max_side: int,
+) -> None:
     image = Image.open(image_path).convert("RGB")
+    scale = 1.0
+    if max_side > 0:
+        width, height = image.size
+        scale = min(1.0, max_side / max(width, height))
+        if scale < 1.0:
+            new_size = (max(1, int(width * scale)), max(1, int(height * scale)))
+            image = image.resize(new_size, Image.Resampling.BILINEAR)
+
     draw = ImageDraw.Draw(image)
     font = ImageFont.load_default()
 
     for det in detections[:max_boxes]:
         x1, y1, x2, y2 = [float(v) for v in det["bbox_xyxy"]]
+        x1, y1, x2, y2 = x1 * scale, y1 * scale, x2 * scale, y2 * scale
         label = f"{det['class_name']} {det['confidence']:.2f}"
         color = color_for_class(str(det["class_name"]))
-        draw.rectangle((x1, y1, x2, y2), outline=color, width=3)
+        line_width = max(2, int(round(3 * scale)))
+        draw.rectangle((x1, y1, x2, y2), outline=color, width=line_width)
         text_bbox = draw.textbbox((x1, y1), label, font=font)
         text_w = text_bbox[2] - text_bbox[0]
         text_h = text_bbox[3] - text_bbox[1]
@@ -199,6 +218,7 @@ def save_visual_samples(
     output_dir: Path,
     sample_per_class: int,
     max_boxes: int,
+    max_side: int,
 ) -> list[str]:
     saved: list[str] = []
     used_by_class: Counter[str] = Counter()
@@ -216,7 +236,11 @@ def save_visual_samples(
         image_path = Path(record["image"])
         out_name = f"{used_by_class[label]:02d}_{image_path.stem}.jpg"
         out_path = visual_dir / label / out_name
-        draw_detections(image_path, record["detections"], out_path, max_boxes=max_boxes)
+        try:
+            draw_detections(image_path, record["detections"], out_path, max_boxes=max_boxes, max_side=max_side)
+        except Exception as exc:
+            print(f"[skip visualization] {image_path}: {exc}", file=sys.stderr)
+            continue
         saved.append(str(out_path))
 
     return saved
@@ -236,6 +260,7 @@ def main() -> None:
     parser.add_argument("--max-images", type=int, default=None, help="Optional limit for quick tests.")
     parser.add_argument("--sample-per-class", type=int, default=4, help="Visualization samples per fMoW class.")
     parser.add_argument("--max-boxes-per-image", type=int, default=80, help="Max boxes drawn on each visualization.")
+    parser.add_argument("--vis-max-side", type=int, default=1600, help="Resize visualization longest side to this size.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing output files.")
     args = parser.parse_args()
 
@@ -277,6 +302,7 @@ def main() -> None:
         output_dir,
         sample_per_class=args.sample_per_class,
         max_boxes=args.max_boxes_per_image,
+        max_side=args.vis_max_side,
     )
 
     evidence_counts = Counter()
@@ -297,6 +323,7 @@ def main() -> None:
         "evidence_jsonl": str(evidence_path),
         "facility_summary_csv": str(output_dir / "facility_evidence_summary.csv"),
         "visualizations": saved_visuals,
+        "vis_max_side": args.vis_max_side,
         "facility_rows": facility_rows,
     }
     summary_path = output_dir / "summary.json"
