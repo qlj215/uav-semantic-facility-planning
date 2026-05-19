@@ -147,3 +147,31 @@ outputs/fmow_yolo_evidence/visualizations/
 ```
 
 这一步不计算检测 mAP，因为 fMoW 没有这些目标框真值。它的作用是检查 DIOR 训练出的证据检测器能否在 fMoW 上提供可解释的目标证据。
+
+## 证据融合分析
+
+```bash
+bash scripts/run_evidence_fusion_analysis.sh
+```
+
+默认输入：
+
+```text
+outputs/fmow_yolo_evidence/evidence.jsonl
+outputs/clip_linear_probe_1000epochs/hf_clip_vit_b32/predictions.jsonl
+```
+
+输出：
+
+```text
+outputs/evidence_fusion_analysis/fusion_report.md
+outputs/evidence_fusion_analysis/facility_fusion_summary.csv
+outputs/evidence_fusion_analysis/focus_pair_summary.csv
+outputs/evidence_fusion_analysis/focus_pair_cases.csv
+```
+
+如果只想分析 YOLO 证据对真实 fMoW 类别的支持度，不接分类预测：
+
+```bash
+PREDICTIONS=none bash scripts/run_evidence_fusion_analysis.sh
+```

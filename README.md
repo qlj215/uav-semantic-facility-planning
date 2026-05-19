@@ -157,6 +157,29 @@ bash scripts/run_fmow_yolo_evidence_inference.sh
 runs/detect/outputs/dior_yolo/yolov8n_evidence_min/weights/best.pt
 ```
 
+运行证据融合分析：
+
+```bash
+bash scripts/run_evidence_fusion_analysis.sh
+```
+
+默认会读取：
+
+```text
+outputs/fmow_yolo_evidence/evidence.jsonl
+outputs/clip_linear_probe_1000epochs/hf_clip_vit_b32/predictions.jsonl
+```
+
+输出：
+
+```text
+outputs/evidence_fusion_analysis/fusion_report.md
+outputs/evidence_fusion_analysis/fused_records.jsonl
+outputs/evidence_fusion_analysis/facility_fusion_summary.csv
+outputs/evidence_fusion_analysis/focus_pair_summary.csv
+outputs/evidence_fusion_analysis/focus_pair_cases.csv
+```
+
 ## CLIP / RemoteCLIP Zero-Shot
 
 HuggingFace CLIP：
