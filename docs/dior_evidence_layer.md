@@ -75,3 +75,53 @@ data/manifests/dior_evidence/summary.json
 每条记录包含图片路径、目标框、证据类别和数量。下一步再把这些清单接到一个简单检测 baseline，不急着做复杂模型。
 
 脚本兼容常见 DIOR 目录名，例如 `JPEGImages`、`JPEGImages-trainval`、`JPEGImages-test` 和 `Annotations/Horizontal Bounding Boxes`。
+
+## 转成 YOLO 格式
+
+```bash
+python3 scripts/prepare_dior_yolo_dataset.py \
+  --input data/manifests/dior_evidence/all.jsonl \
+  --output /root/autodl-tmp/data/dior_yolo_evidence \
+  --overwrite
+```
+
+默认会按 8:2 划分 train/val，并使用软链接指向原始图片，不会复制一份图片。
+
+输出结构：
+
+```text
+/root/autodl-tmp/data/dior_yolo_evidence/
+├── data.yaml
+├── classes.txt
+├── summary.json
+├── images/train/
+├── images/val/
+├── labels/train/
+└── labels/val/
+```
+
+## 最小 YOLO 检测 baseline
+
+```bash
+DATASET_DIR=/root/autodl-tmp/data/dior_yolo_evidence \
+bash scripts/run_dior_yolo_min_baseline.sh
+```
+
+默认参数：
+
+```text
+MODEL=yolov8n.pt
+EPOCHS=20
+IMGSZ=640
+BATCH=16
+WORKERS=8
+DEVICE=0
+```
+
+如果显存够，可以这样加大 batch：
+
+```bash
+DATASET_DIR=/root/autodl-tmp/data/dior_yolo_evidence \
+BATCH=32 EPOCHS=30 \
+bash scripts/run_dior_yolo_min_baseline.sh
+```

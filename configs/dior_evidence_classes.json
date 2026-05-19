@@ -12,6 +12,16 @@
     "chimney": "industrial_chimney",
     "bridge": "bridge"
   },
+  "yolo_classes": [
+    "aircraft",
+    "airport_region",
+    "bridge",
+    "harbor",
+    "industrial_chimney",
+    "ship",
+    "storage_tank",
+    "vehicle"
+  ],
   "facility_support": {
     "airport": ["aircraft", "airport_region", "vehicle"],
     "runway": ["aircraft", "airport_region", "vehicle"],

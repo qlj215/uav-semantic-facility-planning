@@ -22,6 +22,8 @@ data/fmow_key_subset_imagefolder/val/
 data/fmow_key_subset_imagefolder/manifest.jsonl
 data/fmow_key_subset_imagefolder/class_to_idx.json
 data/fmow_key_subset_imagefolder/summary.json
+data/manifests/dior_evidence/
+data/dior_yolo_evidence/
 outputs/
 presentations/
 

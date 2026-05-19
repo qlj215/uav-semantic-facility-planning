@@ -126,6 +126,22 @@ python3 scripts/prepare_dior_evidence_manifest.py \
   --output-dir data/manifests/dior_evidence
 ```
 
+转成 YOLO 格式：
+
+```bash
+python3 scripts/prepare_dior_yolo_dataset.py \
+  --input data/manifests/dior_evidence/all.jsonl \
+  --output /root/autodl-tmp/data/dior_yolo_evidence \
+  --overwrite
+```
+
+跑一个最小 YOLO 检测 baseline：
+
+```bash
+DATASET_DIR=/root/autodl-tmp/data/dior_yolo_evidence \
+bash scripts/run_dior_yolo_min_baseline.sh
+```
+
 ## CLIP / RemoteCLIP Zero-Shot
 
 HuggingFace CLIP：
