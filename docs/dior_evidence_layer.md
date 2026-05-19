@@ -125,3 +125,25 @@ DATASET_DIR=/root/autodl-tmp/data/dior_yolo_evidence \
 BATCH=32 EPOCHS=30 \
 bash scripts/run_dior_yolo_min_baseline.sh
 ```
+
+## 跑到 fMoW 验证集
+
+训练好 DIOR YOLO 后，用它给 fMoW 验证图生成目标证据：
+
+```bash
+MODEL=outputs/dior_yolo/yolov8n_evidence_min/weights/best.pt \
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+OUTPUT_DIR=outputs/fmow_yolo_evidence \
+bash scripts/run_fmow_yolo_evidence_inference.sh
+```
+
+输出：
+
+```text
+outputs/fmow_yolo_evidence/evidence.jsonl
+outputs/fmow_yolo_evidence/summary.json
+outputs/fmow_yolo_evidence/facility_evidence_summary.csv
+outputs/fmow_yolo_evidence/visualizations/
+```
+
+这一步不计算检测 mAP，因为 fMoW 没有这些目标框真值。它的作用是检查 DIOR 训练出的证据检测器能否在 fMoW 上提供可解释的目标证据。

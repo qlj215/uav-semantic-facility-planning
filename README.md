@@ -142,6 +142,21 @@ DATASET_DIR=/root/autodl-tmp/data/dior_yolo_evidence \
 bash scripts/run_dior_yolo_min_baseline.sh
 ```
 
+将训练好的 YOLO 证据检测器跑到 fMoW 验证集：
+
+```bash
+MODEL=outputs/dior_yolo/yolov8n_evidence_min/weights/best.pt \
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+OUTPUT_DIR=outputs/fmow_yolo_evidence \
+bash scripts/run_fmow_yolo_evidence_inference.sh
+```
+
+如果训练结果在 Ultralytics 默认目录下，把 `MODEL` 改成：
+
+```text
+runs/detect/outputs/dior_yolo/yolov8n_evidence_min/weights/best.pt
+```
+
 ## CLIP / RemoteCLIP Zero-Shot
 
 HuggingFace CLIP：
