@@ -180,6 +180,22 @@ outputs/evidence_fusion_analysis/focus_pair_summary.csv
 outputs/evidence_fusion_analysis/focus_pair_cases.csv
 ```
 
+运行小样本“YOLO证据 + VLM/HPE复核”实验：
+
+```bash
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+bash scripts/run_evidence_hpe_review_cases.sh
+```
+
+这个脚本会先从 `focus_pair_cases.csv` 中挑选每组混淆对 3 个案例，再调用 Qwen2.5-VL 做复核。默认使用 ModelScope 下载/加载模型，输出：
+
+```text
+outputs/evidence_hpe_review_cases/case_subset.jsonl
+outputs/evidence_hpe_review_cases/selected_cases.csv
+outputs/evidence_hpe_review_cases/qwen2_5_vl_7b_evidence_review/predictions.jsonl
+outputs/evidence_hpe_review_cases/qwen2_5_vl_7b_evidence_review/case_review_report.md
+```
+
 ## CLIP / RemoteCLIP Zero-Shot
 
 HuggingFace CLIP：

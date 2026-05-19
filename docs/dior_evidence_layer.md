@@ -175,3 +175,34 @@ outputs/evidence_fusion_analysis/focus_pair_cases.csv
 ```bash
 PREDICTIONS=none bash scripts/run_evidence_fusion_analysis.sh
 ```
+
+## YOLO证据 + VLM/HPE复核小实验
+
+这个实验只看少量典型案例，不作为完整 benchmark。它的目的很明确：检查 YOLO 目标证据能否帮助 VLM/HPE 解释或复核三组重点混淆：
+
+- `shipyard/port`
+- `runway/airport`
+- `storage_tank/oil_or_gas_facility`
+
+一键运行：
+
+```bash
+DATA_ROOT=/root/autodl-tmp/data/fmow_key_subset_imagefolder \
+bash scripts/run_evidence_hpe_review_cases.sh
+```
+
+主要输出：
+
+```text
+outputs/evidence_hpe_review_cases/case_subset.jsonl
+outputs/evidence_hpe_review_cases/selected_cases.csv
+outputs/evidence_hpe_review_cases/case_preview.md
+outputs/evidence_hpe_review_cases/qwen2_5_vl_7b_evidence_review/case_review_report.md
+outputs/evidence_hpe_review_cases/qwen2_5_vl_7b_evidence_review/case_review_summary.csv
+```
+
+报告中重点看三件事：
+
+- VLM 复核是否修正了原分类模型的错误。
+- YOLO 证据是否能解释混淆原因。
+- 哪些案例仍然需要人工复核。
