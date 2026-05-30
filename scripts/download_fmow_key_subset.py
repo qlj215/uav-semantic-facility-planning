@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import argparse
 import bz2
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Dict, Iterable, List
-
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "data" / "manifests" / "fmow-rgb_manifest.json.bz2"
@@ -95,19 +95,30 @@ def build_jsonl_record(split: str, class_name: str, image_rel: str, metadata_rel
     }
 
 
+def download_pair(image_path: str) -> tuple[str, bool, bool]:
+    meta_path = metadata_path_for_image(image_path)
+    downloaded_img = download_file(image_path, OUT_ROOT / image_path)
+    downloaded_meta = download_file(meta_path, OUT_ROOT / meta_path)
+    return image_path, downloaded_img, downloaded_meta
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download a small fMoW-rgb key-category subset.")
     parser.add_argument("--train-limit", type=int, default=20, help="RGB images per class from train split")
     parser.add_argument("--val-limit", type=int, default=5, help="RGB images per class from val split")
     parser.add_argument("--classes", nargs="*", default=KEY_CLASSES, help="fMoW class names to download")
+    parser.add_argument("--workers", type=int, default=8, help="Parallel download workers")
     args = parser.parse_args()
 
+    if args.workers <= 0:
+        raise ValueError("--workers must be positive")
     if not MANIFEST.exists():
         raise FileNotFoundError(f"manifest not found: {MANIFEST}")
 
     paths = load_manifest(MANIFEST)
     all_records: List[Dict[str, str]] = []
     stats: Dict[str, Dict[str, int]] = {}
+    download_jobs: List[str] = []
 
     for class_name in args.classes:
         stats[class_name] = {"train": 0, "val": 0}
@@ -117,14 +128,23 @@ def main() -> None:
 
             for image_path in images:
                 meta_path = metadata_path_for_image(image_path)
-                image_rel = image_path
-                metadata_rel = meta_path
+                download_jobs.append(image_path)
+                all_records.append(
+                    build_jsonl_record(
+                        split=split,
+                        class_name=class_name,
+                        image_rel=image_path,
+                        metadata_rel=meta_path,
+                    )
+                )
 
-                downloaded_img = download_file(image_path, OUT_ROOT / image_rel)
-                downloaded_meta = download_file(meta_path, OUT_ROOT / metadata_rel)
-                status = "downloaded" if downloaded_img or downloaded_meta else "exists"
-                print(f"[{status}] {image_path}", flush=True)
-                all_records.append(build_jsonl_record(split, class_name, image_rel, metadata_rel))
+    print(f"download jobs: {len(download_jobs)} images + metadata, workers={args.workers}", flush=True)
+    with ThreadPoolExecutor(max_workers=args.workers) as executor:
+        futures = [executor.submit(download_pair, image_path) for image_path in download_jobs]
+        for future in as_completed(futures):
+            image_path, downloaded_img, downloaded_meta = future.result()
+            status = "downloaded" if downloaded_img or downloaded_meta else "exists"
+            print(f"[{status}] {image_path}", flush=True)
 
     manifest_dir = OUT_ROOT / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)

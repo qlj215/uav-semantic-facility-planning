@@ -18,7 +18,7 @@ set -euo pipefail
 DATA_ROOT="${DATA_ROOT:-data/fmow_key_subset_imagefolder}"
 OUT_ROOT="${OUT_ROOT:-outputs/clip_baselines}"
 SPLIT="${SPLIT:-val}"
-BATCH_SIZE="${BATCH_SIZE:-32}"
+BATCH_SIZE="${BATCH_SIZE:-64}"
 
 HF_CLIP_MODEL="${HF_CLIP_MODEL:-openai/clip-vit-base-patch32}"
 OPENCLIP_MODEL="${OPENCLIP_MODEL:-ViT-B-32}"
